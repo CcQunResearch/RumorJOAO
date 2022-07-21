@@ -20,7 +20,7 @@ from torch_geometric.loader import DataLoader
 from Main.pargs import pargs
 from Main.dataset import WeiboDataset, WeiboFTDataset, PreDataLoader
 from Main.word2vec import Embedding, collect_sentences, train_word2vec
-from Main.sort import sort_weibo_dataset, sort_weibo_self_dataset
+from Main.sort import sort_weibo_dataset, sort_weibo_self_dataset, sort_weibo_2class_dataset
 from Main.model import ResGCN_graphcl
 from Main.utils import create_log_dict_semisup, write_log, write_json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -38,13 +38,17 @@ def semisup_train(unsup_train_loader, train_loader, model, optimizer, device, ga
     n_aug_train = np.random.choice(25, 1, p=aug_prob_train)[0]
     n_aug3, n_aug4 = n_aug_train // 5, n_aug_train % 5
 
-    iter_train_loader = iter(train_loader)
-    for _, data1, data2 in unsup_train_loader:
-        try:
-            data, data3, data4 = next(iter_train_loader)
-        except StopIteration:
-            iter_train_loader = iter(train_loader)
-            data, data3, data4 = next(iter_train_loader)
+    # iter_train_loader = iter(train_loader)
+    # for _, data1, data2 in unsup_train_loader:
+    #     try:
+    #         data, data3, data4 = next(iter_train_loader)
+    #     except StopIteration:
+    #         iter_train_loader = iter(train_loader)
+    #         data, data3, data4 = next(iter_train_loader)
+
+    for data_tup1, data_tup2 in zip(train_loader, unsup_train_loader):
+        data, data1, data2 = data_tup1
+        _, data3, data4 = data_tup2
 
         optimizer.zero_grad()
         data = data.to(device)
@@ -176,7 +180,6 @@ if __name__ == '__main__':
     aug_ratio = args.aug_ratio
     batch_size = args.batch_size
     unsup_bs_ratio = args.unsup_bs_ratio
-    lr = args.lr
     weight_decay = args.weight_decay
     lamda = args.lamda
     epochs = args.epochs
@@ -204,35 +207,42 @@ if __name__ == '__main__':
             sort_weibo_dataset(label_source_path, label_dataset_path)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path)
+        elif dataset == 'Weibo-2class':
+            sort_weibo_2class_dataset(label_source_path, label_dataset_path)
 
         sentences = collect_sentences(label_dataset_path, unlabel_dataset_path, unsup_train_size)
         w2v_model = train_word2vec(sentences, vector_size)
         w2v_model.save(model_path)
-
-    word2vec = Embedding(model_path)
-    unlabel_dataset = WeiboDataset(unlabel_dataset_path, word2vec, clean=False)
-    unlabel_dataset.set_aug_mode('sample')
-    unlabel_dataset.set_aug_ratio(aug_ratio)
-    aug_prob = np.ones(25) / 25
-    unlabel_dataset.set_aug_prob(aug_prob)
 
     for run in range(runs):
         write_log(log, f'run:{run}')
         log_record = {'run': run, 'val accs': [], 'test accs': [], 'test prec T': [], 'test prec F': [],
                       'test rec T': [], 'test rec F': [], 'test f1 T': [], 'test f1 F': []}
 
-        unsup_train_loader = PreDataLoader(unlabel_dataset, batch_size, shuffle=True)
+        word2vec = Embedding(model_path)
+        unlabel_dataset = WeiboDataset(unlabel_dataset_path, word2vec, clean=False)
+        unlabel_dataset.set_aug_mode('sample')
+        unlabel_dataset.set_aug_ratio(aug_ratio)
+        aug_prob = np.ones(25) / 25
+        unlabel_dataset.set_aug_prob(aug_prob)
+
+        unsup_train_loader = PreDataLoader(unlabel_dataset, batch_size * unsup_bs_ratio, shuffle=True)
 
         if dataset == 'Weibo':
             sort_weibo_dataset(label_source_path, label_dataset_path, k)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path, k)
+        elif dataset == 'Weibo-2class':
+            sort_weibo_2class_dataset(label_source_path, label_dataset_path, k)
 
         train_dataset = WeiboDataset(train_path, word2vec)
+        train_dataset.set_aug_mode('sample')
+        train_dataset.set_aug_ratio(aug_ratio)
+        train_dataset.set_aug_prob(aug_prob)
         val_dataset = WeiboFTDataset(val_path, word2vec)
         test_dataset = WeiboFTDataset(test_path, word2vec)
 
-        train_loader = PreDataLoader(train_dataset, batch_size=batch_size * unsup_bs_ratio, shuffle=True)
+        train_loader = PreDataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=batch_size)
         val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
@@ -240,11 +250,11 @@ if __name__ == '__main__':
                                num_conv_layers=args.n_layers_conv, num_fc_layers=args.n_layers_fc, gfn=False,
                                collapse=False, residual=args.skip_connection, res_branch=args.res_branch,
                                global_pool=args.global_pool, dropout=args.dropout, edge_norm=args.edge_norm).to(device)
-        optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=weight_decay)
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.7, patience=5, min_lr=0.000001)
 
         val_error, log_info, log_record = test_and_log(model, val_loader, test_loader,
-                                                       device, 0, lr, 0, 0, log_record)
+                                                       device, 0, args.lr, 0, 0, log_record)
         write_log(log, log_info)
 
         for epoch in range(1, epochs + 1):
@@ -271,5 +281,5 @@ if __name__ == '__main__':
         log_record['mean acc'] = round(np.mean(log_record['test accs'][-8:]), 3)
         write_log(log, '')
 
-    log_dict['record'].append(log_record)
-    write_json(log_dict, log_json_path)
+        log_dict['record'].append(log_record)
+        write_json(log_dict, log_json_path)

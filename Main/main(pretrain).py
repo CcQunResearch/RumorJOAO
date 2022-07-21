@@ -7,6 +7,7 @@
 # @Note    :
 import sys
 import os.path as osp
+
 dirname = osp.dirname(osp.abspath(__file__))
 sys.path.append(osp.join(dirname, '..'))
 import numpy as np
@@ -19,11 +20,10 @@ from torch_geometric.loader import DataLoader
 from Main.pargs import pargs
 from Main.dataset import WeiboDataset, WeiboFTDataset, PreDataLoader
 from Main.word2vec import Embedding, collect_sentences, train_word2vec
-from Main.sort import sort_weibo_dataset, sort_weibo_self_dataset
+from Main.sort import sort_weibo_dataset, sort_weibo_self_dataset, sort_weibo_2class_dataset
 from Main.model import ResGCN_graphcl
 from Main.utils import create_log_dict_pretrain, write_log, write_json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
 
 
 def pre_train(dataloader, model, optimizer, device, gamma_joao):
@@ -177,8 +177,6 @@ if __name__ == '__main__':
 
     aug_ratio = args.aug_ratio
     batch_size = args.batch_size
-    lr = args.lr
-    ft_lr = args.ft_lr
     weight_decay = args.weight_decay
     epochs = args.epochs
     ft_epochs = args.ft_epochs
@@ -205,26 +203,28 @@ if __name__ == '__main__':
             sort_weibo_dataset(label_source_path, label_dataset_path)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path)
+        elif dataset == 'Weibo-2class':
+            sort_weibo_2class_dataset(label_source_path, label_dataset_path)
 
         sentences = collect_sentences(label_dataset_path, unlabel_dataset_path, unsup_train_size)
         w2v_model = train_word2vec(sentences, vector_size)
         w2v_model.save(model_path)
 
     word2vec = Embedding(model_path)
-    unlabel_dataset = WeiboDataset(unlabel_dataset_path, word2vec, clean=False)
-    unlabel_dataset.set_aug_mode('sample')
-    unlabel_dataset.set_aug_ratio(aug_ratio)
-    aug_prob = np.ones(25) / 25
-    unlabel_dataset.set_aug_prob(aug_prob)
-    unsup_train_loader = PreDataLoader(unlabel_dataset, batch_size, shuffle=True)
-
 
     for run in range(runs):
+        unlabel_dataset = WeiboDataset(unlabel_dataset_path, word2vec, clean=False)
+        unlabel_dataset.set_aug_mode('sample')
+        unlabel_dataset.set_aug_ratio(aug_ratio)
+        aug_prob = np.ones(25) / 25
+        unlabel_dataset.set_aug_prob(aug_prob)
+        unsup_train_loader = PreDataLoader(unlabel_dataset, batch_size, shuffle=True)
+
         model = ResGCN_graphcl(dataset=unlabel_dataset, hidden=args.hidden, num_feat_layers=args.n_layers_feat,
                                num_conv_layers=args.n_layers_conv, num_fc_layers=args.n_layers_fc, gfn=False,
                                collapse=False, residual=args.skip_connection, res_branch=args.res_branch,
                                global_pool=args.global_pool, dropout=args.dropout, edge_norm=args.edge_norm).to(device)
-        optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=weight_decay)
 
         write_log(log, f'runs:{run}')
         log_record = {
@@ -247,6 +247,7 @@ if __name__ == '__main__':
         ks = [10, 20, 40, 80, 100, 200, 300, 500, 10000]
         for k in ks:
             for r in range(ft_runs):
+                ft_lr = args.ft_lr
                 write_log(log, f'k:{k}, r:{r}')
 
                 ft_log_record = {'k': k, 'r': r, 'val accs': [], 'test accs': [], 'test prec T': [], 'test prec F': [],
@@ -256,6 +257,8 @@ if __name__ == '__main__':
                     sort_weibo_dataset(label_source_path, label_dataset_path, k)
                 elif dataset == 'Weibo-self':
                     sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path, k)
+                elif dataset == 'Weibo-2class':
+                    sort_weibo_2class_dataset(label_source_path, label_dataset_path, k)
 
                 train_dataset = WeiboFTDataset(train_path, word2vec)
                 val_dataset = WeiboFTDataset(val_path, word2vec)
@@ -266,19 +269,19 @@ if __name__ == '__main__':
                 val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
                 model.load_state_dict(torch.load(weight_path))
-                optimizer = Adam(model.parameters(), lr=ft_lr, weight_decay=weight_decay)
+                optimizer = Adam(model.parameters(), lr=args.ft_lr, weight_decay=weight_decay)
                 scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.7, patience=5, min_lr=0.000001)
 
                 val_error, log_info, ft_log_record = test_and_log(model, val_loader, test_loader,
-                                                                  device, 0, lr, 0, 0, ft_log_record)
+                                                                  device, 0, args.ft_lr, 0, 0, ft_log_record)
                 write_log(log, log_info)
 
                 for epoch in range(1, ft_epochs + 1):
-                    lr = scheduler.optimizer.param_groups[0]['lr']
+                    ft_lr = scheduler.optimizer.param_groups[0]['lr']
                     train_loss, train_acc = fine_tuning(model, optimizer, train_loader, device)
 
                     val_error, log_info, ft_log_record = test_and_log(model, val_loader, test_loader,
-                                                                      device, epoch, lr, train_loss, train_acc,
+                                                                      device, epoch, ft_lr, train_loss, train_acc,
                                                                       ft_log_record)
                     write_log(log, log_info)
 
