@@ -203,7 +203,7 @@ if __name__ == '__main__':
             sort_weibo_dataset(label_source_path, label_dataset_path)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path)
-        elif dataset == 'Weibo-2class':
+        elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
             sort_weibo_2class_dataset(label_source_path, label_dataset_path)
 
         sentences = collect_sentences(label_dataset_path, unlabel_dataset_path, unsup_train_size)
@@ -257,7 +257,7 @@ if __name__ == '__main__':
                     sort_weibo_dataset(label_source_path, label_dataset_path, k)
                 elif dataset == 'Weibo-self':
                     sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path, k)
-                elif dataset == 'Weibo-2class':
+                elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
                     sort_weibo_2class_dataset(label_source_path, label_dataset_path, k)
 
                 train_dataset = WeiboFTDataset(train_path, word2vec)

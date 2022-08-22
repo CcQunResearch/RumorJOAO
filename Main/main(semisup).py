@@ -183,7 +183,6 @@ if __name__ == '__main__':
     weight_decay = args.weight_decay
     lamda = args.lamda
     epochs = args.epochs
-    ft_epochs = args.ft_epochs
     gamma_joao = args.gamma_joao
 
     label_source_path = osp.join(dirname, '..', 'Data', dataset, 'source')
@@ -197,7 +196,6 @@ if __name__ == '__main__':
     log_name = time.strftime("%Y-%m-%d %H-%M-%S", time.localtime(time.time()))
     log_path = osp.join(dirname, '..', 'Log', f'{log_name}.log')
     log_json_path = osp.join(dirname, '..', 'Log', f'{log_name}.json')
-    weight_path = osp.join(dirname, '..', 'Model', f'{log_name}.pt')
 
     log = open(log_path, 'w')
     log_dict = create_log_dict_semisup(args)
@@ -207,7 +205,7 @@ if __name__ == '__main__':
             sort_weibo_dataset(label_source_path, label_dataset_path)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path)
-        elif dataset == 'Weibo-2class':
+        elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
             sort_weibo_2class_dataset(label_source_path, label_dataset_path)
 
         sentences = collect_sentences(label_dataset_path, unlabel_dataset_path, unsup_train_size)
@@ -232,7 +230,7 @@ if __name__ == '__main__':
             sort_weibo_dataset(label_source_path, label_dataset_path, k)
         elif dataset == 'Weibo-self':
             sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path, k)
-        elif dataset == 'Weibo-2class':
+        elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
             sort_weibo_2class_dataset(label_source_path, label_dataset_path, k)
 
         train_dataset = WeiboDataset(train_path, word2vec)
