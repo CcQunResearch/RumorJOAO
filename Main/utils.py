@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2022/5/27 15:41
-# @Author  : CcQun
-# @Email   : 13698603020@163.com
+# @Author  :
+# @Email   :
 # @File    : utils.py
 # @Software: PyCharm
 # @Note    :
@@ -49,6 +49,7 @@ def clean_comment(comment_text):
 def create_log_dict_pretrain(args):
     log_dict = {}
     log_dict['dataset'] = args.dataset
+    log_dict['unsup dataset'] = args.unsup_dataset
     log_dict['unsup train size'] = args.unsup_train_size
     log_dict['runs'] = args.runs
 
@@ -81,6 +82,7 @@ def create_log_dict_pretrain(args):
 def create_log_dict_semisup(args):
     log_dict = {}
     log_dict['dataset'] = args.dataset
+    log_dict['unsup dataset'] = args.unsup_dataset
     log_dict['unsup train size'] = args.unsup_train_size
     log_dict['runs'] = args.runs
 
@@ -105,6 +107,43 @@ def create_log_dict_semisup(args):
     log_dict['aug mode'] = args.aug_mode
     log_dict['aug ratio'] = args.aug_ratio
     log_dict['gamma joao'] = args.gamma_joao
+
+    log_dict['k'] = args.k
+
+    log_dict['record'] = []
+    return log_dict
+
+
+def create_log_dict_sup(args):
+    log_dict = {}
+    log_dict['dataset'] = args.dataset
+    log_dict['unsup train size'] = args.unsup_train_size
+    log_dict['runs'] = args.runs
+
+    log_dict['batch size'] = args.batch_size
+    log_dict['unsup_bs_ratio'] = args.unsup_bs_ratio
+    log_dict['n layers feat'] = args.n_layers_feat
+    log_dict['n layers conv'] = args.n_layers_conv
+    log_dict['n layers fc'] = args.n_layers_fc
+    log_dict['vector size'] = args.vector_size
+    log_dict['hidden'] = args.hidden
+    log_dict['global pool'] = args.global_pool
+    log_dict['skip connection'] = args.skip_connection
+    log_dict['res branch'] = args.res_branch
+    log_dict['dropout'] = args.dropout
+    log_dict['edge norm'] = args.edge_norm
+
+    log_dict['lr'] = args.lr
+    log_dict['epochs'] = args.epochs
+    log_dict['weight decay'] = args.weight_decay
+    log_dict['lamda'] = args.lamda
+
+    log_dict['aug mode'] = args.aug_mode
+    log_dict['aug ratio'] = args.aug_ratio
+    log_dict['gamma joao'] = args.gamma_joao
+
+    log_dict['use unlabel'] = args.use_unlabel
+    log_dict['use unsup loss'] = args.use_unsup_loss
 
     log_dict['k'] = args.k
 

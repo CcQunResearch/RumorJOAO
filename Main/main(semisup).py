@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2022/6/14 15:07
-# @Author  : CcQun
-# @Email   : 13698603020@163.com
+# @Author  :
+# @Email   :
 # @File    : main(semisup).py
 # @Software: PyCharm
 # @Note    :
@@ -30,13 +30,13 @@ def semisup_train(unsup_train_loader, train_loader, model, optimizer, device, ga
     model.train()
     total_loss = 0
 
-    aug_prob_unsup = unsup_train_loader.dataset.aug_prob
-    n_aug_unsup = np.random.choice(25, 1, p=aug_prob_unsup)[0]
-    n_aug1, n_aug2 = n_aug_unsup // 5, n_aug_unsup % 5
-
     aug_prob_train = train_loader.dataset.aug_prob
     n_aug_train = np.random.choice(25, 1, p=aug_prob_train)[0]
-    n_aug3, n_aug4 = n_aug_train // 5, n_aug_train % 5
+    n_aug1, n_aug2 = n_aug_train // 5, n_aug_train % 5
+
+    aug_prob_unsup = unsup_train_loader.dataset.aug_prob
+    n_aug_unsup = np.random.choice(25, 1, p=aug_prob_unsup)[0]
+    n_aug3, n_aug4 = n_aug_unsup // 5, n_aug_unsup % 5
 
     # iter_train_loader = iter(train_loader)
     # for _, data1, data2 in unsup_train_loader:
@@ -172,6 +172,7 @@ if __name__ == '__main__':
 
     unsup_train_size = args.unsup_train_size
     dataset = args.dataset
+    unsup_dataset = args.unsup_dataset
     vector_size = args.vector_size
     device = args.gpu if args.cuda else 'cpu'
     runs = args.runs
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     train_path = osp.join(label_dataset_path, 'train')
     val_path = osp.join(label_dataset_path, 'val')
     test_path = osp.join(label_dataset_path, 'test')
-    unlabel_dataset_path = osp.join(dirname, '..', 'Data', 'Weibo-unsup', 'dataset')
+    unlabel_dataset_path = osp.join(dirname, '..', 'Data', unsup_dataset, 'dataset')
     model_path = osp.join(dirname, '..', 'Model', f'w2v_{dataset}_{unsup_train_size}_{vector_size}.model')
 
     log_name = time.strftime("%Y-%m-%d %H-%M-%S", time.localtime(time.time()))
@@ -203,9 +204,7 @@ if __name__ == '__main__':
     if not osp.exists(model_path):
         if dataset == 'Weibo':
             sort_weibo_dataset(label_source_path, label_dataset_path)
-        elif dataset == 'Weibo-self':
-            sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path)
-        elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
+        elif 'DRWeibo' in dataset:
             sort_weibo_2class_dataset(label_source_path, label_dataset_path)
 
         sentences = collect_sentences(label_dataset_path, unlabel_dataset_path, unsup_train_size)
@@ -227,11 +226,9 @@ if __name__ == '__main__':
         unsup_train_loader = PreDataLoader(unlabel_dataset, batch_size * unsup_bs_ratio, shuffle=True)
 
         if dataset == 'Weibo':
-            sort_weibo_dataset(label_source_path, label_dataset_path, k)
-        elif dataset == 'Weibo-self':
-            sort_weibo_self_dataset(label_source_path, label_dataset_path, unlabel_dataset_path, k)
-        elif dataset == 'Weibo-2class' or dataset == 'Weibo-2class-long':
-            sort_weibo_2class_dataset(label_source_path, label_dataset_path, k)
+            sort_weibo_dataset(label_source_path, label_dataset_path, k_shot=k)
+        elif 'DRWeibo' in dataset:
+            sort_weibo_2class_dataset(label_source_path, label_dataset_path, k_shot=k)
 
         train_dataset = WeiboDataset(train_path, word2vec)
         train_dataset.set_aug_mode('sample')
@@ -276,7 +273,7 @@ if __name__ == '__main__':
 
             scheduler.step(val_error)
 
-        log_record['mean acc'] = round(np.mean(log_record['test accs'][-8:]), 3)
+        log_record['mean acc'] = round(np.mean(log_record['test accs'][-10:]), 3)
         write_log(log, '')
 
         log_dict['record'].append(log_record)

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2022/5/7 20:26
+# @Time    : 2022/9/20 14:38
 # @Author  :
 # @Email   :
-# @File    : record.py
+# @File    : record_sup.py
 # @Software: PyCharm
 # @Note    :
 import os
@@ -26,7 +26,6 @@ if __name__ == '__main__':
 
             log = json.load(open(filepath, 'r', encoding='utf-8'))
             print('dataset:', log['dataset'])
-            print('unsup dataset:', log['unsup dataset'])
             print('unsup train size:', log['unsup train size'])
             print('batch size:', log['batch size'])
             print('unsup bs ratio:', log['unsup_bs_ratio'])
@@ -47,6 +46,8 @@ if __name__ == '__main__':
             print('aug mode:', log['aug mode'])
             print('aug ratio:', log['aug ratio'])
             print('gamma joao:', log['gamma joao'])
+            print('use unlabel:', log['use unlabel'])
+            print('use unsup loss:', log['use unsup loss'])
             print('k:', log['k'])
 
             acc_list = []

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2022/5/27 18:59
-# @Author  : CcQun
-# @Email   : 13698603020@163.com
+# @Author  :
+# @Email   :
 # @File    : dataset.py
 # @Software: PyCharm
 # @Note    :
@@ -78,8 +78,12 @@ class WeiboFTDataset(InMemoryDataset):
                     else:
                         row.append(post['comment'][id_to_index[comment['parent']]]['comment id'] + 1)
                     col.append(comment['comment id'] + 1)
-                edge_index = [row, col]
-                edge_attr = torch.ones(len(row), 1)
+                tdrow = row
+                tdcol = col
+                burow = col
+                bucol = row
+                edge_index = [tdrow + burow, tdcol + bucol]
+                edge_attr = torch.ones(len(edge_index[0]), 1)
                 y = torch.LongTensor(y)
                 edge_index = torch.LongTensor(edge_index)
                 one_data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr) if 'label' in post[
@@ -101,8 +105,12 @@ class WeiboFTDataset(InMemoryDataset):
                         [x, self.word2vec.get_sentence_embedding(clean_comment(comment['content'])).view(1, -1)], 0)
                     row.append(comment['parent'] + 1)
                     col.append(comment['comment id'] + 1)
-                edge_index = [row, col]
-                edge_attr = torch.ones(len(row), 1)
+                tdrow = row
+                tdcol = col
+                burow = col
+                bucol = row
+                edge_index = [tdrow + burow, tdcol + bucol]
+                edge_attr = torch.ones(len(edge_index[0]), 1)
                 y = torch.LongTensor(y)
                 edge_index = torch.LongTensor(edge_index)
                 one_data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr) if 'label' in post[
@@ -192,8 +200,12 @@ class WeiboDataset(InMemoryDataset):
                     else:
                         row.append(post['comment'][id_to_index[comment['parent']]]['comment id'] + 1)
                     col.append(comment['comment id'] + 1)
-                edge_index = [row, col]
-                edge_attr = torch.ones(len(row), 1)
+                tdrow = row
+                tdcol = col
+                burow = col
+                bucol = row
+                edge_index = [tdrow + burow, tdcol + bucol]
+                edge_attr = torch.ones(len(edge_index[0]), 1)
                 y = torch.LongTensor(y)
                 edge_index = torch.LongTensor(edge_index)
                 one_data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr) if 'label' in post[
@@ -215,8 +227,12 @@ class WeiboDataset(InMemoryDataset):
                         [x, self.word2vec.get_sentence_embedding(clean_comment(comment['content'])).view(1, -1)], 0)
                     row.append(comment['parent'] + 1)
                     col.append(comment['comment id'] + 1)
-                edge_index = [row, col]
-                edge_attr = torch.ones(len(row), 1)
+                tdrow = row
+                tdcol = col
+                burow = col
+                bucol = row
+                edge_index = [tdrow + burow, tdcol + bucol]
+                edge_attr = torch.ones(len(edge_index[0]), 1)
                 y = torch.LongTensor(y)
                 edge_index = torch.LongTensor(edge_index)
                 one_data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr) if 'label' in post[
@@ -275,9 +291,6 @@ class WeiboDataset(InMemoryDataset):
             data2 = self.augmentations[n_aug2](data2, self.aug_ratio)
 
         return data, data1, data2
-
-
-
 
 
 def node_drop(data, aug_ratio):
